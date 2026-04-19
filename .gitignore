@@ -1,4 +1,5 @@
 .DS_Store
+data/
 backend/.venv/
 backend/webclip.db
 backend/**/*.pyc

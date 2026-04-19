@@ -1,0 +1,15 @@
+.git
+.gitignore
+**/.pytest_cache
+**/__pycache__
+**/*.pyc
+**/.venv
+**/*.db
+**/.DS_Store
+backend/pip.conf
+docs
+extension
+README.md
+docker-compose.yml
+.env
+data

@@ -67,7 +67,15 @@
 
 ---
 
-## 5. よく触るコマンド
+## 5. Docker
+
+- **`Dockerfile`**: コンテキストは `webclip/` ルート。`backend/` を `/app` にコピーし `uvicorn app.main:app`。
+- **DB パス**: 既定 `DATABASE_URL=sqlite:////app/data/webclip.db`（4 スラッシュは絶対パス）。`docker-compose.yml` は `./data:/app/data` をマウント。
+- **`docker-entrypoint.sh`**: `/app/data` を作成してから uvicorn 起動。
+- **`.dockerignore`**: `backend/pip.conf` を除外（社内 PyPI 依存をビルドに持ち込まない）。`extension/` や `docs/` もイメージに不要なため除外。
+- **Compose**: `WEBCLIP_PORT` でホスト側ポートを変更可能。
+
+## 6. よく触るコマンド
 
 ```bash
 cd backend
@@ -75,9 +83,14 @@ pytest tests/ -q
 uvicorn app.main:app --reload --host 127.0.0.1 --port 3847
 ```
 
+```bash
+# リポジトリ直下
+docker compose up -d --build
+```
+
 ---
 
-## 6. 未着手 / 任意の拡張アイデア
+## 7. 未着手 / 任意の拡張アイデア
 
 - 拡張から **HTML 断片**を送り、サーバで markdownify する（現状はプレーンテキスト→Markdown のみ）。
 - `WEBCLIP_TRASH_RETENTION_DAYS` をフロントの「30日」表記と API で共有（現状は文言が既定値前提）。
