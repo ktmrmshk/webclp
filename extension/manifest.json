@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Webclip",
+  "version": "0.1.0",
+  "description": "Clip the current page to your local Webclip catalog",
+  "permissions": ["activeTab", "contextMenus", "scripting", "storage"],
+  "host_permissions": ["http://127.0.0.1:3847/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Clip this page"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  }
+}

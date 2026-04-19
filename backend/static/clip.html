@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Webclip — クリップ中</title>
+  <style>
+    body {
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      background: #0f1216;
+      color: #e8eaef;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .box {
+      max-width: 420px;
+      background: #171b22;
+      border: 1px solid #2a3140;
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    a { color: #5b8cff; }
+    .err { color: #ff7b7b; margin-top: 0.75rem; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <p id="status">ページを取得してクリップしています…</p>
+    <p id="err" class="err" hidden></p>
+  </div>
+  <script>
+    (async function () {
+      const params = new URLSearchParams(location.search);
+      const url = params.get("url");
+      const pageTitle = params.get("title");
+      const errEl = document.getElementById("err");
+      const statusEl = document.getElementById("status");
+      if (!url) {
+        statusEl.textContent = "URL パラメータがありません。";
+        errEl.hidden = false;
+        errEl.textContent = "ブックマークレットから開くか、トップの「URLをクリップ」を使ってください。";
+        return;
+      }
+      try {
+        const headers = { "Content-Type": "application/json" };
+        const t = sessionStorage.getItem("webclip_bearer_token");
+        if (t) headers["Authorization"] = "Bearer " + t;
+        const payload = { url };
+        if (pageTitle && pageTitle.trim()) payload.title = pageTitle.trim();
+        const r = await fetch("/api/clips/from-url", {
+          method: "POST",
+          headers: headers,
+          body: JSON.stringify(payload),
+        });
+        const text = await r.text();
+        if (r.status === 401) {
+          throw new Error("401: トークンが必要です。トップ (/) で API トークンを保存してから再度お試しください。");
+        }
+        if (!r.ok) {
+          let detail = text;
+          try {
+            const j = JSON.parse(text);
+            if (j.detail) detail = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail);
+          } catch (_) {}
+          throw new Error(detail);
+        }
+        statusEl.innerHTML = "クリップしました。<a href=\"/\">カタログを開く</a>";
+        location.replace("/");
+      } catch (e) {
+        statusEl.textContent = "失敗しました";
+        errEl.hidden = false;
+        errEl.textContent = e.message || String(e);
+      }
+    })();
+  </script>
+</body>
+</html>

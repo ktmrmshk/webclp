@@ -1,0 +1,5 @@
+.DS_Store
+backend/.venv/
+backend/webclip.db
+backend/**/*.pyc
+__pycache__/

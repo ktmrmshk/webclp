@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Webclip</title>
+  <style>
+    :root {
+      --bg: #0f1216;
+      --card: #171b22;
+      --text: #e8eaef;
+      --muted: #9aa3b2;
+      --accent: #5b8cff;
+      --border: #2a3140;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+      justify-content: space-between;
+    }
+    h1 { font-size: 1.25rem; font-weight: 600; margin: 0; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+    input, select, button, textarea {
+      font: inherit;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      padding: 0.45rem 0.65rem;
+    }
+    button {
+      cursor: pointer;
+      background: var(--accent);
+      border-color: transparent;
+      color: #fff;
+    }
+    button.secondary { background: transparent; border-color: var(--border); color: var(--text); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    main { padding: 1rem 1.5rem 2rem; max-width: 1100px; margin: 0 auto; }
+    main.view-list-wrap { max-width: 960px; }
+    main.view-compact-wrap { max-width: 100%; padding-left: 0.75rem; padding-right: 0.75rem; }
+    .catalog.view-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1rem;
+    }
+    .catalog.view-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    article {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 200px;
+    }
+    .catalog.view-list article {
+      flex-direction: row;
+      align-items: stretch;
+      min-height: 0;
+    }
+    article .thumb-wrap {
+      flex-shrink: 0;
+      background: #0a0c10;
+      overflow: hidden;
+    }
+    .catalog.view-grid article .thumb-wrap {
+      width: 100%;
+    }
+    .catalog.view-grid article img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      display: block;
+    }
+    .catalog.view-grid article .thumb-placeholder {
+      height: 120px;
+    }
+    .catalog.view-list article .thumb-wrap {
+      width: 140px;
+      min-width: 140px;
+    }
+    .catalog.view-list article img {
+      width: 140px;
+      height: 96px;
+      object-fit: cover;
+      display: block;
+    }
+    .catalog.view-list article .thumb-placeholder {
+      width: 140px;
+      height: 96px;
+    }
+    .thumb-placeholder { background: #0a0c10; }
+    article .body { padding: 0.75rem 1rem 1rem; flex: 1; display: flex; flex-direction: column; gap: 0.35rem; min-width: 0; }
+    .catalog.view-list article .body { padding: 0.65rem 0.9rem; }
+    article h2 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin: 0;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .catalog.view-list article h2 { -webkit-line-clamp: 1; }
+    article p.summary {
+      margin: 0;
+      font-size: 0.8rem;
+      color: var(--muted);
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .catalog.view-list article p.summary { -webkit-line-clamp: 2; font-size: 0.78rem; }
+    .catalog.view-compact {
+      display: flex;
+      flex-direction: column;
+      gap: 0.28rem;
+    }
+    .catalog.view-compact article {
+      flex-direction: row;
+      align-items: stretch;
+      min-height: 0;
+      border-radius: 8px;
+    }
+    .catalog.view-compact article .thumb-wrap {
+      width: 72px;
+      min-width: 72px;
+      align-self: center;
+    }
+    .catalog.view-compact article img,
+    .catalog.view-compact article .thumb-placeholder {
+      width: 72px;
+      height: 48px;
+    }
+    .catalog.view-compact article .body {
+      padding: 0.35rem 0.5rem 0.35rem 0.6rem;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        "title edit"
+        "url edit"
+        "meta edit";
+      gap: 0.12rem 0.45rem;
+      align-items: center;
+    }
+    .catalog.view-compact article p.summary { display: none; }
+    .catalog.view-compact article h2 {
+      grid-area: title;
+      font-size: 0.8rem;
+      -webkit-line-clamp: 1;
+      line-height: 1.25;
+    }
+    .catalog.view-compact article a.url {
+      grid-area: url;
+      font-size: 0.65rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: block;
+      min-width: 0;
+    }
+    .catalog.view-compact article .meta {
+      grid-area: meta;
+      margin-top: 0;
+      font-size: 0.62rem;
+      flex-wrap: nowrap;
+      overflow: hidden;
+      gap: 0.2rem;
+    }
+    .catalog.view-compact article .tag {
+      font-size: 0.6rem;
+      padding: 0.05rem 0.28rem;
+      flex-shrink: 0;
+    }
+    .catalog.view-compact article .meta .tag:nth-child(n+4) { display: none; }
+    .catalog.view-compact article button[data-edit] {
+      grid-area: edit;
+      margin: 0;
+      align-self: center;
+      padding: 0.22rem 0.5rem;
+      font-size: 0.72rem;
+    }
+    article a.url {
+      font-size: 0.75rem;
+      color: var(--accent);
+      text-decoration: none;
+      word-break: break-all;
+    }
+    .meta {
+      font-size: 0.7rem;
+      color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-top: auto;
+    }
+    .tag {
+      display: inline-block;
+      padding: 0.1rem 0.35rem;
+      border-radius: 4px;
+      background: #222833;
+      font-size: 0.7rem;
+    }
+    .tag.auto { border: 1px dashed #3d4a60; }
+    dialog {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--card);
+      color: var(--text);
+      max-width: min(520px, 92vw);
+      width: 100%;
+    }
+    dialog::backdrop { background: rgba(0,0,0,0.55); }
+    .dlg-body { display: flex; flex-direction: column; gap: 0.5rem; }
+    label { font-size: 0.8rem; color: var(--muted); }
+    textarea { min-height: 100px; resize: vertical; }
+    .row { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end; margin-top: 0.5rem; }
+    .empty { color: var(--muted); text-align: center; padding: 3rem 1rem; }
+    .err { color: #ff7b7b; font-size: 0.85rem; }
+    .pagination {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem 1rem;
+      margin-top: 1.25rem;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--card);
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .pagination .page-nav { display: flex; align-items: center; gap: 0.35rem; }
+    .pagination .page-info { min-width: 8rem; text-align: center; }
+    .pagination label.page-size { display: flex; align-items: center; gap: 0.35rem; margin: 0; }
+    article .body a.read-md {
+      display: inline-block;
+      margin-top: 0.45rem;
+      margin-right: 0.45rem;
+      padding: 0.45rem 0.65rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.82rem;
+    }
+    article .body a.read-md:hover { filter: brightness(1.1); }
+    .catalog.view-compact article .body a.read-md {
+      margin-top: 0;
+      padding: 0.22rem 0.5rem;
+      font-size: 0.72rem;
+    }
+    article.clip-card { position: relative; }
+    .card-chk {
+      position: absolute;
+      top: 0.45rem;
+      left: 0.45rem;
+      z-index: 3;
+      display: none;
+      align-items: center;
+      background: rgba(15, 18, 22, 0.92);
+      border-radius: 8px;
+      padding: 0.25rem 0.35rem;
+      border: 1px solid var(--border);
+    }
+    .catalog.delete-mode .card-chk { display: flex; }
+    .card-chk input { width: 1.15rem; height: 1.15rem; margin: 0; cursor: pointer; }
+    .bulk-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--card);
+      font-size: 0.85rem;
+    }
+    .bulk-bar .bulk-label { color: var(--muted); margin-right: 0.25rem; }
+    button.toolbar-active {
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+    .trash-banner {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 1rem;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--card);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Webclip</h1>
+    <div class="toolbar">
+      <input type="search" id="q" placeholder="検索…" />
+      <select id="filterCat">
+        <option value="">すべてのカテゴリ</option>
+      </select>
+      <select id="filterTag">
+        <option value="">すべてのタグ</option>
+      </select>
+      <label class="toolbar-label" style="display:flex;align-items:center;gap:0.35rem;font-size:0.85rem;color:var(--muted);">
+        表示
+        <select id="viewMode" title="カタログの表示形式">
+          <option value="grid">ブロック</option>
+          <option value="list">リスト</option>
+          <option value="compact">リスト（コンパクト）</option>
+        </select>
+      </label>
+      <button type="button" class="secondary" id="toggleTrash" title="ゴミ箱のクリップを表示">ゴミ箱</button>
+      <button type="button" class="secondary" id="toggleDeleteMode" title="チェックボックスで複数選択">削除モード</button>
+      <button type="button" class="secondary" id="reload">再読込</button>
+    </div>
+  </header>
+  <main>
+    <section
+      style="margin-bottom:1rem;padding:1rem;border:1px solid var(--border);border-radius:12px;background:var(--card);"
+    >
+      <div style="font-size:0.85rem;color:var(--muted);margin-bottom:0.5rem;">
+        API トークン（サーバで <code style="font-size:0.8rem">WEBCLIP_BEARER_AUTH_ENABLED</code> が有効かつ
+        <code style="font-size:0.8rem">WEBCLIP_API_TOKEN</code> があるとき必須。ブラウザのみに保存）
+      </div>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+        <input
+          type="password"
+          id="apiToken"
+          placeholder="Bearer トークン（未設定サーバでは空）"
+          autocomplete="off"
+          style="flex:1;min-width:200px;"
+        />
+        <button type="button" class="secondary" id="saveToken">保存</button>
+      </div>
+    </section>
+    <section
+      style="margin-bottom:1rem;padding:1rem;border:1px solid var(--border);border-radius:12px;background:var(--card);"
+    >
+      <div style="font-size:0.85rem;color:var(--muted);margin-bottom:0.5rem;">
+        拡張機能なしでクリップ: ページの URL を貼り付けて取得（サーバが HTML をダウンロードして解析）
+      </div>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+        <input
+          type="url"
+          id="clipUrl"
+          placeholder="https://example.com/article"
+          style="flex:1;min-width:220px;"
+        />
+        <button type="button" id="clipFromUrl">URLをクリップ</button>
+        <a
+          href="/bookmarklet.html"
+          style="color:var(--accent);font-size:0.9rem;text-decoration:none;padding:0.35rem 0.5rem;"
+          >ブックマークレット</a>
+      </div>
+    </section>
+    <p id="msg" class="err" hidden></p>
+    <p id="trashBanner" class="trash-banner" hidden>
+      ゴミ箱のクリップは <strong>30 日</strong> 経過後に完全に削除されます。誤って移動した場合は「削除モード」で選択して復元できます。
+    </p>
+    <div id="bulkBar" class="bulk-bar" hidden>
+      <span class="bulk-label" id="bulkSelectedLabel">選択: 0 件</span>
+      <button type="button" class="secondary" id="bulkSelectPage">ページ内を全選択</button>
+      <button type="button" id="bulkTrash">選択をゴミ箱へ移動</button>
+      <button type="button" id="bulkRestore" hidden>選択を復元</button>
+      <button type="button" class="secondary" id="bulkPermanent" hidden>選択を完全削除</button>
+    </div>
+    <div id="catalog" class="catalog view-grid"></div>
+    <nav id="pagination" class="pagination" hidden aria-label="ページ送り">
+      <div class="page-nav">
+        <button type="button" class="secondary" id="pageFirst">先頭</button>
+        <button type="button" class="secondary" id="pagePrev">前へ</button>
+        <span id="pageInfo" class="page-info"></span>
+        <button type="button" class="secondary" id="pageNext">次へ</button>
+        <button type="button" class="secondary" id="pageLast">末尾</button>
+      </div>
+      <label class="page-size">
+        表示件数
+        <select id="pageSize" title="1ページあたりの件数">
+          <option value="12">12</option>
+          <option value="24" selected>24</option>
+          <option value="48">48</option>
+          <option value="96">96</option>
+        </select>
+      </label>
+    </nav>
+    <p id="empty" class="empty" hidden>
+      クリップがありません。上の欄に URL を入力するか、ブックマークレットを追加してクリップしてください。
+    </p>
+  </main>
+
+  <dialog id="dlg">
+    <form method="dialog" id="form">
+      <h3 style="margin-top:0">編集</h3>
+      <div class="dlg-body">
+        <label>タイトル</label>
+        <input type="text" id="fTitle" />
+        <label>サマリ</label>
+        <textarea id="fSummary"></textarea>
+        <label>カテゴリ</label>
+        <input type="text" id="fCat" placeholder="空欄で未分類" />
+        <label>タグ（カンマ区切り）</label>
+        <input type="text" id="fTags" />
+        <label>本文（Markdown）</label>
+        <textarea id="fBody" placeholder="記事の本文。サイトが消えてもここから読めます。"></textarea>
+      </div>
+      <div class="row">
+        <button type="button" class="secondary" id="del">ゴミ箱へ移動</button>
+        <button type="button" class="secondary" id="cancelEdit">キャンセル</button>
+        <button type="submit" value="ok">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    const API = ""; // same origin
+    const TOKEN_KEY = "webclip_bearer_token";
+    const VIEW_MODE_KEY = "webclip_view_mode";
+    const PAGE_SIZE_KEY = "webclip_page_size";
+    const TRASH_VIEW_KEY = "webclip_trash_view";
+    let clips = [];
+    let editingId = null;
+    let currentPage = 1;
+    let listTotal = 0;
+    let trashView = sessionStorage.getItem(TRASH_VIEW_KEY) === "1";
+    let deleteMode = false;
+    const selectedIds = new Set();
+
+    function getPageSize() {
+      const n = parseInt(localStorage.getItem(PAGE_SIZE_KEY) || "24", 10);
+      return [12, 24, 48, 96].includes(n) ? n : 24;
+    }
+
+    function syncPageSizeSelect() {
+      const sel = document.getElementById("pageSize");
+      if (sel) sel.value = String(getPageSize());
+    }
+
+    function getViewMode() {
+      const v = localStorage.getItem(VIEW_MODE_KEY);
+      if (v === "list" || v === "compact") return v;
+      return "grid";
+    }
+
+    function applyViewMode() {
+      const mode = getViewMode();
+      const cat = document.getElementById("catalog");
+      const main = document.querySelector("main");
+      cat.classList.remove("view-grid", "view-list", "view-compact");
+      if (mode === "list") cat.classList.add("view-list");
+      else if (mode === "compact") cat.classList.add("view-compact");
+      else cat.classList.add("view-grid");
+      main.classList.toggle("view-list-wrap", mode === "list");
+      main.classList.toggle("view-compact-wrap", mode === "compact");
+      const sel = document.getElementById("viewMode");
+      if (sel) sel.value = mode;
+    }
+
+    function apiFetch(url, opts) {
+      const o = opts || {};
+      // null は Headers のコンストラクタに渡せない（undefined / 省略のみ可）
+      const headers = new Headers(o.headers);
+      const t = sessionStorage.getItem(TOKEN_KEY);
+      if (t) headers.set("Authorization", "Bearer " + t);
+      return fetch(url, { ...o, headers });
+    }
+
+    async function formatApiError(res, fallbackLabel) {
+      const fb = fallbackLabel || "エラー";
+      try {
+        const text = await res.text();
+        if (!text) return fb + " (HTTP " + res.status + ")";
+        const j = JSON.parse(text);
+        if (j.detail !== undefined) {
+          const d = j.detail;
+          if (typeof d === "string") return fb + ": " + d;
+          if (Array.isArray(d)) {
+            const parts = d.map((x) => (x.msg != null ? x.msg : JSON.stringify(x)));
+            return fb + ": " + parts.join("; ");
+          }
+          return fb + ": " + JSON.stringify(d);
+        }
+      } catch (_) {
+        /* ignore */
+      }
+      return fb + " (HTTP " + res.status + ")";
+    }
+
+    document.getElementById("saveToken").addEventListener("click", () => {
+      const v = document.getElementById("apiToken").value.trim();
+      if (v) sessionStorage.setItem(TOKEN_KEY, v);
+      else sessionStorage.removeItem(TOKEN_KEY);
+      loadFilters().then(render);
+    });
+
+    (function initTokenField() {
+      const existing = sessionStorage.getItem(TOKEN_KEY);
+      if (existing) document.getElementById("apiToken").placeholder = "（保存済み・変更する場合は入力）";
+    })();
+
+    document.getElementById("toggleTrash").addEventListener("click", () => {
+      trashView = !trashView;
+      sessionStorage.setItem(TRASH_VIEW_KEY, trashView ? "1" : "0");
+      currentPage = 1;
+      selectedIds.clear();
+      render();
+    });
+
+    document.getElementById("toggleDeleteMode").addEventListener("click", () => {
+      deleteMode = !deleteMode;
+      if (!deleteMode) selectedIds.clear();
+      render();
+    });
+
+    document.getElementById("bulkSelectPage").addEventListener("click", () => {
+      clips.forEach((c) => selectedIds.add(c.id));
+      render();
+    });
+
+    document.getElementById("bulkTrash").addEventListener("click", async () => {
+      const ids = Array.from(selectedIds);
+      if (!ids.length) return;
+      if (!confirm(`${ids.length} 件をゴミ箱に移動しますか？\n（30 日経過後に完全削除されます）`)) return;
+      const res = await apiFetch(API + "/api/clips/bulk/trash", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+      if (res.status === 401) {
+        showErr("トークンが必要です");
+        return;
+      }
+      if (!res.ok) {
+        showErr(await formatApiError(res, "一括移動に失敗しました"));
+        return;
+      }
+      selectedIds.clear();
+      await loadFilters();
+      await render();
+    });
+
+    document.getElementById("bulkRestore").addEventListener("click", async () => {
+      const ids = Array.from(selectedIds);
+      if (!ids.length) return;
+      if (!confirm(`${ids.length} 件を復元しますか？`)) return;
+      const res = await apiFetch(API + "/api/clips/bulk/restore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+      if (res.status === 401) {
+        showErr("トークンが必要です");
+        return;
+      }
+      if (!res.ok) {
+        showErr(await formatApiError(res, "復元に失敗しました"));
+        return;
+      }
+      selectedIds.clear();
+      await loadFilters();
+      await render();
+    });
+
+    document.getElementById("bulkPermanent").addEventListener("click", async () => {
+      const ids = Array.from(selectedIds);
+      if (!ids.length) return;
+      if (
+        !confirm(
+          `選択した ${ids.length} 件を完全に削除しますか？\nこの操作は取り消せません。`
+        )
+      ) {
+        return;
+      }
+      const res = await apiFetch(API + "/api/clips/bulk/permanent", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+      if (res.status === 401) {
+        showErr("トークンが必要です");
+        return;
+      }
+      if (!res.ok) {
+        showErr(await formatApiError(res, "完全削除に失敗しました"));
+        return;
+      }
+      selectedIds.clear();
+      await loadFilters();
+      await render();
+    });
+
+    async function loadFilters() {
+      const [tagsRes, catRes] = await Promise.all([
+        apiFetch(API + "/api/tags"),
+        apiFetch(API + "/api/categories"),
+      ]);
+      if (tagsRes.status === 401 || catRes.status === 401) {
+        showErr("API がトークンを要求しています。WEBCLIP_API_TOKEN と同じ値を上に入力して「保存」してください。");
+        clips = [];
+        return;
+      }
+      if (!tagsRes.ok || !catRes.ok) {
+        showErr("フィルタ用データの取得に失敗しました。サーバを再起動してみてください。");
+        clips = [];
+        return;
+      }
+      const tagsPayload = await tagsRes.json();
+      const catsPayload = await catRes.json();
+      const tags = Array.isArray(tagsPayload) ? tagsPayload : [];
+      const cats = Array.isArray(catsPayload) ? catsPayload : [];
+      const fc = document.getElementById("filterCat");
+      const ft = document.getElementById("filterTag");
+      fc.innerHTML = '<option value="">すべてのカテゴリ</option>' +
+        cats.map((c) => `<option value="${escapeAttr(c)}">${escapeHtml(c)}</option>`).join("");
+      ft.innerHTML = '<option value="">すべてのタグ</option>' +
+        tags.map((t) => `<option value="${escapeAttr(t.name)}">${escapeHtml(t.name)}</option>`).join("");
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+    function escapeAttr(s) {
+      return String(s).replace(/"/g, "&quot;");
+    }
+
+    function syncToolbarButtons() {
+      const t = document.getElementById("toggleTrash");
+      const d = document.getElementById("toggleDeleteMode");
+      if (t) t.classList.toggle("toolbar-active", trashView);
+      if (d) d.classList.toggle("toolbar-active", deleteMode);
+    }
+
+    function syncBulkBar() {
+      const bar = document.getElementById("bulkBar");
+      if (!bar) return;
+      if (!deleteMode) {
+        bar.hidden = true;
+        return;
+      }
+      bar.hidden = false;
+      const n = selectedIds.size;
+      const label = document.getElementById("bulkSelectedLabel");
+      if (label) {
+        label.textContent = n ? `選択: ${n} 件` : "チェックボックスで項目を選択";
+      }
+      const btnTrash = document.getElementById("bulkTrash");
+      const btnRestore = document.getElementById("bulkRestore");
+      const btnPerm = document.getElementById("bulkPermanent");
+      if (btnTrash) {
+        btnTrash.hidden = !!trashView;
+        btnTrash.disabled = n === 0;
+      }
+      if (btnRestore) {
+        btnRestore.hidden = !trashView;
+        btnRestore.disabled = n === 0;
+      }
+      if (btnPerm) {
+        btnPerm.hidden = !trashView;
+        btnPerm.disabled = n === 0;
+      }
+    }
+
+    function pruneSelection() {
+      const ids = new Set(clips.map((c) => c.id));
+      for (const id of selectedIds) {
+        if (!ids.has(id)) selectedIds.delete(id);
+      }
+    }
+
+    function updatePaginationBar() {
+      const nav = document.getElementById("pagination");
+      const pageSize = getPageSize();
+      const totalPages = Math.max(1, Math.ceil(listTotal / pageSize) || 1);
+      if (listTotal === 0) {
+        nav.hidden = true;
+        return;
+      }
+      nav.hidden = false;
+      const from = (currentPage - 1) * pageSize + 1;
+      const to = Math.min(currentPage * pageSize, listTotal);
+      document.getElementById("pageInfo").textContent =
+        `${currentPage} / ${totalPages} ページ（${from}–${to} / 全 ${listTotal} 件）`;
+      document.getElementById("pagePrev").disabled = currentPage <= 1;
+      document.getElementById("pageFirst").disabled = currentPage <= 1;
+      document.getElementById("pageNext").disabled = currentPage >= totalPages;
+      document.getElementById("pageLast").disabled = currentPage >= totalPages;
+      syncPageSizeSelect();
+    }
+
+    async function render() {
+      document.getElementById("msg").hidden = true;
+      const q = document.getElementById("q").value.trim();
+      const cat = document.getElementById("filterCat").value;
+      const tag = document.getElementById("filterTag").value;
+      const pageSize = getPageSize();
+      const params = new URLSearchParams();
+      if (q) params.set("q", q);
+      if (cat) params.set("category", cat);
+      if (tag) params.set("tag", tag);
+      if (trashView) params.set("trash", "true");
+      params.set("page", String(currentPage));
+      params.set("page_size", String(pageSize));
+      const url = API + "/api/clips?" + params.toString();
+      const res = await apiFetch(url);
+      if (res.status === 401) {
+        showErr("API がトークンを要求しています。トークンを保存してください。");
+        return;
+      }
+      if (!res.ok) {
+        showErr("一覧の取得に失敗しました");
+        return;
+      }
+      const data = await res.json();
+      // ページネーション付き { items, total } と旧形式の配列の両方に対応
+      let items;
+      let total;
+      if (Array.isArray(data)) {
+        items = data;
+        total = data.length;
+      } else {
+        items = Array.isArray(data.items) ? data.items : [];
+        total = typeof data.total === "number" ? data.total : items.length;
+      }
+      listTotal = total;
+      let totalPages = Math.max(1, Math.ceil(total / pageSize) || 1);
+      if (currentPage > totalPages && totalPages >= 1) {
+        currentPage = totalPages;
+        return render();
+      }
+      clips = items;
+      pruneSelection();
+      const trashBanner = document.getElementById("trashBanner");
+      if (trashBanner) trashBanner.hidden = !trashView;
+      applyViewMode();
+      const catalog = document.getElementById("catalog");
+      catalog.classList.toggle("delete-mode", deleteMode);
+      syncToolbarButtons();
+      syncBulkBar();
+      const empty = document.getElementById("empty");
+      empty.textContent = trashView
+        ? "ゴミ箱は空です。"
+        : "クリップがありません。上の欄に URL を入力するか、ブックマークレットを追加してクリップしてください。";
+      catalog.innerHTML = "";
+      if (!clips || !clips.length) {
+        empty.hidden = listTotal !== 0;
+        updatePaginationBar();
+        return;
+      }
+      empty.hidden = true;
+      const mode = getViewMode();
+      const btnStyle =
+        mode === "compact"
+          ? ""
+          : mode === "list"
+            ? "margin-top:0.35rem;align-self:flex-start"
+            : "margin-top:0.5rem;width:100%";
+      for (const c of clips) {
+        const el = document.createElement("article");
+        el.className = "clip-card";
+        const thumbInner = c.image_url
+          ? `<img src="${escapeAttr(c.image_url)}" alt="" loading="lazy" referrerpolicy="no-referrer" />`
+          : `<div class="thumb-placeholder"></div>`;
+        const thumb = `<div class="thumb-wrap">${thumbInner}</div>`;
+        const tagHtml = (c.tags || [])
+          .map((t) => `<span class="tag ${t.source === "auto" ? "auto" : ""}">${escapeHtml(t.name)}</span>`)
+          .join(" ");
+        const chk = `
+          <div class="card-chk">
+            <input type="checkbox" data-select-id="${c.id}" ${selectedIds.has(c.id) ? "checked" : ""} aria-label="選択" />
+          </div>`;
+        const readMd = `<a class="read-md" href="/read.html?id=${c.id}" target="_blank" rel="noopener">本文を読む</a>`;
+        const editBtn = trashView
+          ? ""
+          : `<button type="button" class="secondary" data-edit="${c.id}"${btnStyle ? ` style="${btnStyle}"` : ""}>編集</button>`;
+        el.innerHTML = `
+          ${chk}
+          ${thumb}
+          <div class="body">
+            <h2>${escapeHtml(c.title || "(無題)")}</h2>
+            <p class="summary">${escapeHtml(c.summary || "")}</p>
+            <a class="url" href="${escapeAttr(c.url)}" target="_blank" rel="noopener">${escapeHtml(c.url)}</a>
+            <div class="meta">
+              ${c.category ? `<span class="tag">${escapeHtml(c.category)}</span>` : ""}
+              ${tagHtml}
+            </div>
+            ${readMd}
+            ${editBtn}
+          </div>
+        `;
+        catalog.appendChild(el);
+      }
+      catalog.querySelectorAll("[data-edit]").forEach((btn) => {
+        btn.addEventListener("click", () => openEdit(Number(btn.getAttribute("data-edit"))));
+      });
+      catalog.querySelectorAll("input[data-select-id]").forEach((inp) => {
+        inp.addEventListener("change", (ev) => {
+          const id = Number(ev.target.getAttribute("data-select-id"));
+          if (ev.target.checked) selectedIds.add(id);
+          else selectedIds.delete(id);
+          syncBulkBar();
+        });
+      });
+      updatePaginationBar();
+    }
+
+    function showErr(t) {
+      const m = document.getElementById("msg");
+      m.textContent = t;
+      m.hidden = false;
+    }
+
+    function openEdit(id) {
+      const c = clips.find((x) => x.id === id);
+      if (!c) return;
+      editingId = id;
+      document.getElementById("fTitle").value = c.title || "";
+      document.getElementById("fSummary").value = c.summary || "";
+      document.getElementById("fCat").value = c.category || "";
+      document.getElementById("fTags").value = (c.tags || []).map((t) => t.name).join(", ");
+      document.getElementById("fBody").value =
+        (c.body_markdown && String(c.body_markdown).trim()) || c.body_text || "";
+      document.getElementById("dlg").showModal();
+    }
+
+    document.getElementById("cancelEdit").addEventListener("click", () => {
+      document.getElementById("dlg").close();
+    });
+
+    document.getElementById("form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!editingId) return;
+      const tagNames = document.getElementById("fTags").value.split(",").map((s) => s.trim()).filter(Boolean);
+      const body = {
+        title: document.getElementById("fTitle").value,
+        summary: document.getElementById("fSummary").value,
+        category: document.getElementById("fCat").value || null,
+        body_markdown: document.getElementById("fBody").value,
+        tag_names: tagNames,
+      };
+      const res = await apiFetch(API + "/api/clips/" + editingId, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.status === 401) {
+        showErr("トークンが必要です");
+        return;
+      }
+      if (!res.ok) {
+        showErr("保存に失敗しました");
+        return;
+      }
+      document.getElementById("dlg").close();
+      await loadFilters();
+      await render();
+    });
+
+    document.getElementById("del").addEventListener("click", async () => {
+      if (
+        !editingId ||
+        !confirm(
+          "このクリップをゴミ箱に移動しますか？\n30 日経過後に完全削除されます。"
+        )
+      ) {
+        return;
+      }
+      const res = await apiFetch(API + "/api/clips/" + editingId, { method: "DELETE" });
+      if (res.status === 401) {
+        showErr("トークンが必要です");
+        return;
+      }
+      if (!res.ok) {
+        showErr(await formatApiError(res, "ゴミ箱への移動に失敗しました"));
+        return;
+      }
+      document.getElementById("dlg").close();
+      await loadFilters();
+      await render();
+    });
+
+    function goToPage(p) {
+      currentPage = Math.max(1, p);
+      render();
+    }
+
+    document.getElementById("pageFirst").addEventListener("click", () => goToPage(1));
+    document.getElementById("pagePrev").addEventListener("click", () => goToPage(currentPage - 1));
+    document.getElementById("pageNext").addEventListener("click", () => goToPage(currentPage + 1));
+    document.getElementById("pageLast").addEventListener("click", () => {
+      const ps = getPageSize();
+      const tp = Math.max(1, Math.ceil(listTotal / ps) || 1);
+      goToPage(tp);
+    });
+    document.getElementById("pageSize").addEventListener("change", (e) => {
+      const v = parseInt(e.target.value, 10);
+      if ([12, 24, 48, 96].includes(v)) {
+        localStorage.setItem(PAGE_SIZE_KEY, String(v));
+        currentPage = 1;
+        render();
+      }
+    });
+
+    document.getElementById("q").addEventListener(
+      "input",
+      debounce(() => {
+        currentPage = 1;
+        render();
+      }, 300)
+    );
+    document.getElementById("filterCat").addEventListener("change", () => {
+      currentPage = 1;
+      render();
+    });
+    document.getElementById("filterTag").addEventListener("change", () => {
+      currentPage = 1;
+      render();
+    });
+    document.getElementById("reload").addEventListener("click", async () => {
+      await loadFilters();
+      await render();
+    });
+
+    document.getElementById("viewMode").addEventListener("change", (e) => {
+      const v = e.target.value;
+      if (v === "grid" || v === "list" || v === "compact") {
+        localStorage.setItem(VIEW_MODE_KEY, v);
+      }
+      applyViewMode();
+      render();
+    });
+
+    document.getElementById("clipFromUrl").addEventListener("click", async () => {
+      const url = document.getElementById("clipUrl").value.trim();
+      if (!url) {
+        showErr("URL を入力してください");
+        return;
+      }
+      document.getElementById("msg").hidden = true;
+      const btn = document.getElementById("clipFromUrl");
+      btn.disabled = true;
+      try {
+        const res = await apiFetch(API + "/api/clips/from-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url }),
+        });
+        const text = await res.text();
+        if (res.status === 401) {
+          showErr("トークンが必要です。WEBCLIP_API_TOKEN と同じ値を保存してください。");
+          return;
+        }
+        if (!res.ok) {
+          let detail = text;
+          try {
+            const j = JSON.parse(text);
+            if (j.detail) detail = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail);
+          } catch (_) {}
+          showErr("クリップに失敗: " + detail);
+          return;
+        }
+        document.getElementById("clipUrl").value = "";
+        currentPage = 1;
+        await loadFilters();
+        await render();
+      } catch (e) {
+        showErr("クリップに失敗: " + (e.message || String(e)));
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    function debounce(fn, ms) {
+      let t;
+      return (...a) => {
+        clearTimeout(t);
+        t = setTimeout(() => fn(...a), ms);
+      };
+    }
+
+    applyViewMode();
+    syncPageSizeSelect();
+    loadFilters().then(render);
+  </script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Webclip — ブックマークレット</title>
+  <style>
+    body {
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      background: #0f1216;
+      color: #e8eaef;
+      margin: 0;
+      line-height: 1.6;
+      padding: 1.5rem;
+      max-width: 640px;
+    }
+    code, pre {
+      display: block;
+      background: #171b22;
+      border: 1px solid #2a3140;
+      border-radius: 8px;
+      padding: 0.75rem;
+      font-size: 0.75rem;
+      word-break: break-all;
+      white-space: pre-wrap;
+    }
+    a { color: #5b8cff; }
+    .muted { color: #9aa3b2; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <h1>ブックマークレット</h1>
+  <p>Chrome 拡張機能が使えない環境でも、ブックマークから同じ操作ができます（閲覧中のページの URL をこの Webclip に送り、サーバが HTML を取得して解析します）。</p>
+  <ol>
+    <li>下のコードをすべてコピーする。</li>
+    <li>ブラウザのブックマークバーに新しいブックマークを追加し、URL 欄に貼り付ける。</li>
+    <li>クリップしたいページを開いた状態で、そのブックマークをクリックする。</li>
+  </ol>
+  <p class="muted">※ 閲覧中タブの <strong>URL</strong> と <strong>タイトル（document.title）</strong> がクエリで渡り、<code>clip.html</code> から API に送られます。タイトルは登録時に優先されます。ポートを変えた場合はこのページを開き直してコードを取り直してください。</p>
+  <p><strong>ブックマーク用 URL（これをコピー）</strong></p>
+  <pre id="bm"></pre>
+  <p><a href="/">← カタログへ戻る</a></p>
+  <script>
+    (function () {
+      var o = location.origin;
+      var code =
+        "javascript:(function(){var b='" +
+        o +
+        "/clip.html?url='+encodeURIComponent(location.href)+'&title='+encodeURIComponent((document.title||'').slice(0,1024));window.open(b,'_blank');})();";
+      document.getElementById("bm").textContent = code;
+    })();
+  </script>
+</body>
+</html>

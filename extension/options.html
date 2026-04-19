@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>Webclip 設定</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 480px; padding: 1rem; }
+    label { display: block; margin-bottom: 0.25rem; font-weight: 600; }
+    input { width: 100%; padding: 0.5rem; box-sizing: border-box; }
+    button { margin-top: 0.75rem; padding: 0.5rem 1rem; }
+    #status { margin-top: 0.5rem; font-size: 0.9rem; color: #2e7d32; }
+  </style>
+</head>
+<body>
+  <h2>Webclip</h2>
+  <p>ローカル API のベース URL（末尾の / は不要）</p>
+  <label for="apiBase">API base URL</label>
+  <input type="url" id="apiBase" placeholder="http://127.0.0.1:3847" />
+  <label for="bearerToken" style="margin-top:1rem">Bearer トークン（WEBCLIP_API_TOKEN 設定時のみ）</label>
+  <input type="password" id="bearerToken" placeholder="空欄で未認証" autocomplete="off" />
+  <button type="button" id="save">保存</button>
+  <p id="status" hidden>保存しました</p>
+  <script src="options.js"></script>
+</body>
+</html>

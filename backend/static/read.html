@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Webclip · 記事を読む</title>
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/github-markdown-css@5/github-markdown-dark.min.css"
+  />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #0d1117;
+      color: #e6edf3;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    header.bar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid #30363d;
+      background: rgba(13, 17, 23, 0.95);
+      backdrop-filter: blur(8px);
+    }
+    header.bar h1 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 600;
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    header.bar a.source {
+      color: #58a6ff;
+      text-decoration: none;
+      font-size: 0.85rem;
+      max-width: 14rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    header.bar a.source:hover { text-decoration: underline; }
+    .btn-group {
+      display: flex;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+    }
+    header.bar button {
+      font: inherit;
+      cursor: pointer;
+      border-radius: 8px;
+      padding: 0.4rem 0.75rem;
+      border: 1px solid #30363d;
+      background: #21262d;
+      color: #e6edf3;
+    }
+    header.bar button.active {
+      background: #1f6feb;
+      border-color: #1f6feb;
+      color: #fff;
+    }
+    header.bar button.secondary {
+      background: transparent;
+    }
+    #err {
+      padding: 2rem;
+      text-align: center;
+      color: #f85149;
+    }
+    #loading {
+      padding: 2rem;
+      text-align: center;
+      color: #8b949e;
+    }
+    .markdown-body {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 1.5rem 1.25rem 3rem;
+    }
+    .markdown-body img {
+      max-width: 100%;
+      height: auto;
+      background: #161b22;
+    }
+    #rawPanel {
+      display: none;
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 1rem 1.25rem 3rem;
+    }
+    #rawPanel pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 0.82rem;
+      line-height: 1.55;
+      color: #e6edf3;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 1rem 1.1rem;
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    }
+    .meta-line {
+      font-size: 0.8rem;
+      color: #8b949e;
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 0 1.25rem;
+    }
+  </style>
+</head>
+<body>
+  <header class="bar">
+    <h1 id="docTitle">読み込み中…</h1>
+    <a id="sourceLink" class="source" href="#" target="_blank" rel="noopener noreferrer" hidden>元ページ</a>
+    <div class="btn-group">
+      <button type="button" id="btnRendered" class="active" title="レンダリング表示">表示</button>
+      <button type="button" id="btnRaw" class="secondary" title="Markdown ソース">Markdown</button>
+      <button type="button" id="btnBack" class="secondary" onclick="location.href='/'">一覧へ</button>
+    </div>
+  </header>
+  <p id="loading">読み込み中…</p>
+  <p id="err" hidden></p>
+  <p id="metaLine" class="meta-line" hidden></p>
+  <article id="renderPanel" class="markdown-body" hidden></article>
+  <div id="rawPanel">
+    <pre id="rawPre"><code id="rawCode"></code></pre>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+  <script>
+    const TOKEN_KEY = "webclip_bearer_token";
+    const API = "";
+
+    function apiFetch(url, opts) {
+      const o = opts || {};
+      const headers = new Headers(o.headers);
+      const t = sessionStorage.getItem(TOKEN_KEY);
+      if (t) headers.set("Authorization", "Bearer " + t);
+      return fetch(url, { ...o, headers });
+    }
+
+    const params = new URLSearchParams(location.search);
+    const id = params.get("id");
+    const loading = document.getElementById("loading");
+    const errEl = document.getElementById("err");
+    const renderPanel = document.getElementById("renderPanel");
+    const rawCode = document.getElementById("rawCode");
+    const rawPanel = document.getElementById("rawPanel");
+    const docTitle = document.getElementById("docTitle");
+    const sourceLink = document.getElementById("sourceLink");
+    const metaLine = document.getElementById("metaLine");
+    const btnRendered = document.getElementById("btnRendered");
+    const btnRaw = document.getElementById("btnRaw");
+
+    let mdSource = "";
+
+    function setMode(rendered) {
+      btnRendered.classList.toggle("active", rendered);
+      btnRendered.classList.toggle("secondary", !rendered);
+      btnRaw.classList.toggle("active", !rendered);
+      btnRaw.classList.toggle("secondary", rendered);
+      renderPanel.hidden = !rendered;
+      rawPanel.style.display = rendered ? "none" : "block";
+    }
+
+    btnRendered.addEventListener("click", () => setMode(true));
+    btnRaw.addEventListener("click", () => setMode(false));
+
+    if (!id || !/^\d+$/.test(id)) {
+      loading.hidden = true;
+      errEl.hidden = false;
+      errEl.textContent = "URL に ?id=クリップID を指定してください。";
+      document.title = "Webclip · エラー";
+    } else {
+      (async () => {
+        const res = await apiFetch(API + "/api/clips/" + id);
+        loading.hidden = true;
+        if (res.status === 401) {
+          errEl.hidden = false;
+          errEl.textContent =
+            "認証が必要です。トップページで API トークンを保存してから再度開いてください。";
+          document.title = "Webclip · 認証";
+          return;
+        }
+        if (res.status === 404) {
+          errEl.hidden = false;
+          errEl.textContent = "クリップが見つかりません。";
+          document.title = "Webclip · 404";
+          return;
+        }
+        if (!res.ok) {
+          errEl.hidden = false;
+          errEl.textContent = "読み込みに失敗しました (HTTP " + res.status + ")";
+          document.title = "Webclip · エラー";
+          return;
+        }
+        const c = await res.json();
+        const title = c.title || "(無題)";
+        document.title = title + " · Webclip";
+        docTitle.textContent = title;
+        sourceLink.href = c.url;
+        sourceLink.textContent = "元ページを開く";
+        sourceLink.hidden = false;
+
+        mdSource =
+          (c.body_markdown && String(c.body_markdown).trim()) ||
+          (c.body_text && String(c.body_text).trim()) ||
+          "_（本文がありません）_";
+
+        rawCode.textContent = mdSource;
+
+        marked.setOptions({ gfm: true, breaks: true });
+        const html = DOMPurify.sanitize(marked.parse(mdSource, { async: false }));
+        renderPanel.innerHTML = html;
+        renderPanel.hidden = false;
+
+        if (c.deleted_at) {
+          metaLine.hidden = false;
+          metaLine.textContent =
+            "このクリップはゴミ箱にあります（保存された Markdown のみ表示しています）。";
+        }
+      })().catch((e) => {
+        loading.hidden = true;
+        errEl.hidden = false;
+        errEl.textContent = "エラー: " + (e.message || String(e));
+      });
+    }
+  </script>
+</body>
+</html>
