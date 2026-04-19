@@ -25,7 +25,7 @@
 | `backend/app/schemas.py` | Pydantic。`ClipOut` に `body_markdown` / `deleted_at` など。 |
 | `backend/app/bearer_middleware.py` | `/api/*` に Bearer（`WEBCLIP_API_TOKEN` と一致）を要求。 |
 | `backend/static/index.html` | 一覧 UI。トークンは `sessionStorage` の `webclip_bearer_token`。 |
-| `backend/static/read.html` | `marked` + `DOMPurify` + `github-markdown-dark`（CDN）。`?id=` で `/api/clips/{id}` を取得。 |
+| `backend/static/read.html` | `marked` + `DOMPurify` + `github-markdown-dark`（CDN）。**配信は `GET /assets/read.html`**（`StaticFiles`）。`/read.html` は **307 で `/assets/read.html` へ**（旧ブックマーク互換）。`apiUrl()` は **origin + プレフィックス + `/api/...` を文字列結合**。Bearer は **sessionStorage と localStorage**（`target=_blank`）。`c.id` は数値で検証。`appRootPath()` は **`/assets/` 配下でも `/api` 用に `/` を返す**。 |
 
 ---
 
@@ -49,7 +49,7 @@
 
 - **保存**: `body_markdown`。from-url は HTML から markdownify。拡張のみのクリップはプレーン `body_text` から段落 Markdown を生成。
 - **検索用**: `body_text` は一覧・検索向けにプレーン化（編集で `body_markdown` 更新時に `markdown_to_plain_preview` で同期）。
-- **閲覧**: `/read.html?id=` — 「表示」と「Markdown」切り替え。`body_markdown` が空なら `body_text` にフォールバック。
+- **閲覧**: `/assets/read.html?id=`（正規）。「表示」と「Markdown」切り替え。`body_markdown` が空なら `body_text` にフォールバック。
 
 ### フロントの互換
 
@@ -61,7 +61,7 @@
 ## 4. 変更時の注意
 
 - **スキーマ追加**: `models.py` に加え、`db.py` に SQLite `ALTER` マイグレーションを追加し、`init_db()` から呼ぶ。
-- **認証**: トークン有効時、ブラウザは `sessionStorage` のトークンを付与。`read.html` も同じキー。
+- **認証**: トークン有効時、ブラウザは `sessionStorage` / `localStorage` のトークンを付与。閲覧ページも同じキー。
 - **拡張**: デフォルト API は `http://127.0.0.1:3847`。サーバのポートと合わせる。
 - **テスト**: `tests/conftest.py` が **import 前**に `DATABASE_URL` を tempfile SQLite に固定。`pytest` は `backend` から実行。
 

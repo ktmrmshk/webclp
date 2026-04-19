@@ -142,14 +142,43 @@
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
   <script>
     const TOKEN_KEY = "webclip_bearer_token";
-    const API = "";
+
+    /** 現在のページと同じ「アプリのルート」から api/clips/:id を解決（サブパス配下でも動く） */
+    function appRootPath() {
+      const p = location.pathname || "/";
+      if (p === "/" || p.startsWith("/assets/")) return "/";
+      const last = p.substring(p.lastIndexOf("/") + 1);
+      if (last && last.includes(".")) {
+        return p.slice(0, p.lastIndexOf("/") + 1) || "/";
+      }
+      return p.endsWith("/") ? p : p + "/";
+    }
+
+    /** index.html と同じく、相対 URL 解決に依存せず api を組み立てる（404 の JSON が本文に出るのを防ぐ） */
+    function apiUrl(path) {
+      const rel = path.startsWith("/") ? path.slice(1) : path;
+      let base = appRootPath();
+      if (base !== "/" && base.endsWith("/")) base = base.slice(0, -1);
+      const prefix = base === "/" ? "" : base;
+      return location.origin + (prefix ? prefix + "/" : "/") + rel;
+    }
+
+    function clipDetailUrl(id) {
+      return apiUrl("api/clips/" + encodeURIComponent(id));
+    }
 
     function apiFetch(url, opts) {
       const o = opts || {};
       const headers = new Headers(o.headers);
-      const t = sessionStorage.getItem(TOKEN_KEY);
+      const t = sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
       if (t) headers.set("Authorization", "Bearer " + t);
       return fetch(url, { ...o, headers });
+    }
+
+    function stripApiErrorJson(s) {
+      const t = String(s || "").trim();
+      if (/^\s*\{[\s\S]*"detail"\s*:/.test(t)) return "";
+      return t;
     }
 
     const params = new URLSearchParams(location.search);
@@ -186,7 +215,7 @@
       document.title = "Webclip · エラー";
     } else {
       (async () => {
-        const res = await apiFetch(API + "/api/clips/" + id);
+        const res = await apiFetch(clipDetailUrl(id));
         loading.hidden = true;
         if (res.status === 401) {
           errEl.hidden = false;
@@ -208,6 +237,15 @@
           return;
         }
         const c = await res.json();
+        if (!c || typeof c.id !== "number") {
+          errEl.hidden = false;
+          errEl.textContent =
+            c && c.detail != null
+              ? "クリップを読み込めませんでした: " + String(c.detail)
+              : "一覧ページで API トークンを保存してから、もう一度「本文を読む」を開いてください。";
+          document.title = "Webclip · エラー";
+          return;
+        }
         const title = c.title || "(無題)";
         document.title = title + " · Webclip";
         docTitle.textContent = title;
@@ -215,10 +253,11 @@
         sourceLink.textContent = "元ページを開く";
         sourceLink.hidden = false;
 
-        mdSource =
-          (c.body_markdown && String(c.body_markdown).trim()) ||
-          (c.body_text && String(c.body_text).trim()) ||
-          "_（本文がありません）_";
+        const mdRaw =
+          stripApiErrorJson(c.body_markdown) ||
+          stripApiErrorJson(c.body_text) ||
+          "";
+        mdSource = mdRaw || "_（本文がありません）_";
 
         rawCode.textContent = mdSource;
 

@@ -434,8 +434,27 @@
   </dialog>
 
   <script>
-    const API = ""; // same origin
     const TOKEN_KEY = "webclip_bearer_token";
+
+    /** リバースプロキシのサブパス配下でも /api が正しく解決されるようにする */
+    function appRootPath() {
+      const p = location.pathname || "/";
+      if (p === "/" || p.startsWith("/assets/")) return "/";
+      const last = p.substring(p.lastIndexOf("/") + 1);
+      if (last && last.includes(".")) {
+        return p.slice(0, p.lastIndexOf("/") + 1) || "/";
+      }
+      return p.endsWith("/") ? p : p + "/";
+    }
+
+    /** new URL(relative, base) の解釈差で /api に届かない環境があるため、文字列で明示的に組み立てる */
+    function apiUrl(path) {
+      const rel = path.startsWith("/") ? path.slice(1) : path;
+      let base = appRootPath();
+      if (base !== "/" && base.endsWith("/")) base = base.slice(0, -1);
+      const prefix = base === "/" ? "" : base;
+      return location.origin + (prefix ? prefix + "/" : "/") + rel;
+    }
     const VIEW_MODE_KEY = "webclip_view_mode";
     const PAGE_SIZE_KEY = "webclip_page_size";
     const TRASH_VIEW_KEY = "webclip_trash_view";
@@ -481,7 +500,7 @@
       const o = opts || {};
       // null は Headers のコンストラクタに渡せない（undefined / 省略のみ可）
       const headers = new Headers(o.headers);
-      const t = sessionStorage.getItem(TOKEN_KEY);
+      const t = sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
       if (t) headers.set("Authorization", "Bearer " + t);
       return fetch(url, { ...o, headers });
     }
@@ -509,14 +528,22 @@
 
     document.getElementById("saveToken").addEventListener("click", () => {
       const v = document.getElementById("apiToken").value.trim();
-      if (v) sessionStorage.setItem(TOKEN_KEY, v);
-      else sessionStorage.removeItem(TOKEN_KEY);
+      if (v) {
+        sessionStorage.setItem(TOKEN_KEY, v);
+        localStorage.setItem(TOKEN_KEY, v);
+      } else {
+        sessionStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(TOKEN_KEY);
+      }
       loadFilters().then(render);
     });
 
     (function initTokenField() {
-      const existing = sessionStorage.getItem(TOKEN_KEY);
+      const existing = sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
       if (existing) document.getElementById("apiToken").placeholder = "（保存済み・変更する場合は入力）";
+      const s = sessionStorage.getItem(TOKEN_KEY);
+      const l = localStorage.getItem(TOKEN_KEY);
+      if (s && !l) localStorage.setItem(TOKEN_KEY, s);
     })();
 
     document.getElementById("toggleTrash").addEventListener("click", () => {
@@ -542,7 +569,7 @@
       const ids = Array.from(selectedIds);
       if (!ids.length) return;
       if (!confirm(`${ids.length} 件をゴミ箱に移動しますか？\n（30 日経過後に完全削除されます）`)) return;
-      const res = await apiFetch(API + "/api/clips/bulk/trash", {
+      const res = await apiFetch(apiUrl("api/clips/bulk/trash"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids }),
@@ -564,7 +591,7 @@
       const ids = Array.from(selectedIds);
       if (!ids.length) return;
       if (!confirm(`${ids.length} 件を復元しますか？`)) return;
-      const res = await apiFetch(API + "/api/clips/bulk/restore", {
+      const res = await apiFetch(apiUrl("api/clips/bulk/restore"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids }),
@@ -592,7 +619,7 @@
       ) {
         return;
       }
-      const res = await apiFetch(API + "/api/clips/bulk/permanent", {
+      const res = await apiFetch(apiUrl("api/clips/bulk/permanent"), {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids }),
@@ -612,8 +639,8 @@
 
     async function loadFilters() {
       const [tagsRes, catRes] = await Promise.all([
-        apiFetch(API + "/api/tags"),
-        apiFetch(API + "/api/categories"),
+        apiFetch(apiUrl("api/tags")),
+        apiFetch(apiUrl("api/categories")),
       ]);
       if (tagsRes.status === 401 || catRes.status === 401) {
         showErr("API がトークンを要求しています。WEBCLIP_API_TOKEN と同じ値を上に入力して「保存」してください。");
@@ -721,7 +748,7 @@
       if (trashView) params.set("trash", "true");
       params.set("page", String(currentPage));
       params.set("page_size", String(pageSize));
-      const url = API + "/api/clips?" + params.toString();
+      const url = apiUrl("api/clips?" + params.toString());
       const res = await apiFetch(url);
       if (res.status === 401) {
         showErr("API がトークンを要求しています。トークンを保存してください。");
@@ -789,7 +816,7 @@
           <div class="card-chk">
             <input type="checkbox" data-select-id="${c.id}" ${selectedIds.has(c.id) ? "checked" : ""} aria-label="選択" />
           </div>`;
-        const readMd = `<a class="read-md" href="/read.html?id=${c.id}" target="_blank" rel="noopener">本文を読む</a>`;
+        const readMd = `<a class="read-md" href="/assets/read.html?id=${c.id}" target="_blank" rel="noopener">本文を読む</a>`;
         const editBtn = trashView
           ? ""
           : `<button type="button" class="secondary" data-edit="${c.id}"${btnStyle ? ` style="${btnStyle}"` : ""}>編集</button>`;
@@ -858,7 +885,7 @@
         body_markdown: document.getElementById("fBody").value,
         tag_names: tagNames,
       };
-      const res = await apiFetch(API + "/api/clips/" + editingId, {
+      const res = await apiFetch(apiUrl("api/clips/" + editingId), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -885,7 +912,7 @@
       ) {
         return;
       }
-      const res = await apiFetch(API + "/api/clips/" + editingId, { method: "DELETE" });
+      const res = await apiFetch(apiUrl("api/clips/" + editingId), { method: "DELETE" });
       if (res.status === 401) {
         showErr("トークンが必要です");
         return;
@@ -960,7 +987,7 @@
       const btn = document.getElementById("clipFromUrl");
       btn.disabled = true;
       try {
-        const res = await apiFetch(API + "/api/clips/from-url", {
+        const res = await apiFetch(apiUrl("api/clips/from-url"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ url }),

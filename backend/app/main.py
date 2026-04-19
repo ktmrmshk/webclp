@@ -1,9 +1,9 @@
 from datetime import datetime, timedelta
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
@@ -386,6 +386,16 @@ def bookmarklet_help():
 
 
 @app.get("/read.html")
-def read_article_page():
-    """保存した Markdown 本文を GitHub 風に表示するページ（?id=）。"""
-    return _static_file("read.html")
+def read_article_page_redirect(request: Request):
+    """正規 URL は /assets/read.html（StaticFiles）。旧ブックマーク互換でリダイレクト。"""
+    q = request.url.query
+    loc = "/assets/read.html" + ("?" + q if q else "")
+    return RedirectResponse(url=loc, status_code=307)
+
+
+@app.get("/read")
+def read_article_short_redirect(request: Request):
+    """同上。本文閲覧の正規パスは /assets/read.html 。"""
+    q = request.url.query
+    loc = "/assets/read.html" + ("?" + q if q else "")
+    return RedirectResponse(url=loc, status_code=307)
