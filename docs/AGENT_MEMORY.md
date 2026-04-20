@@ -20,7 +20,8 @@
 | `backend/app/main.py` | ルート定義。`/api/clips/bulk/*` は `/api/clips/{id}` より **先に** 定義（パス衝突回避）。 |
 | `backend/app/models.py` | `Clip`（`body_text`, `body_markdown`, `deleted_at`, …）、`Tag`、多対多 `clip_tags`。 |
 | `backend/app/db.py` | `init_db()` で `create_all` + SQLite マイグレーション。`get_db()` 先頭で `init_db()` を呼び、**初回 API アクセスでもマイグレーションが確実に走る**ようにしている。 |
-| `backend/app/fetch_page.py` | `fetch_and_extract`: httpx で HTML 取得、`BeautifulSoup` + **markdownify** で本文 HTML→Markdown。 |
+| `backend/app/fetch_page.py` | `fetch_and_extract`: httpx で HTML 取得、`BeautifulSoup` + **markdownify** で本文 HTML→Markdown。相対 URL→絶対 URL 変換も担当。 |
+| `backend/app/image_archiver.py` | Markdown 内画像のローカルアーカイブ。DL→SHA-256 保存→URL 書き換え。 |
 | `backend/app/markdown_util.py` | プレーンテキスト→段落 Markdown、Markdown→プレーン（検索用）の補助。 |
 | `backend/app/schemas.py` | Pydantic。`ClipOut` に `body_markdown` / `deleted_at` など。 |
 | `backend/app/bearer_middleware.py` | `/api/*` に Bearer（`WEBCLIP_API_TOKEN` と一致）を要求。 |
@@ -50,6 +51,20 @@
 - **保存**: `body_markdown`。from-url は HTML から markdownify。拡張のみのクリップはプレーン `body_text` から段落 Markdown を生成。
 - **検索用**: `body_text` は一覧・検索向けにプレーン化（編集で `body_markdown` 更新時に `markdown_to_plain_preview` で同期）。
 - **閲覧**: `/assets/read.html?id=`（正規）。「表示」と「Markdown」切り替え。`body_markdown` が空なら `body_text` にフォールバック。
+
+### 画像ローカルアーカイブ
+
+- **目的**: クリップ時に Markdown 内の画像をローカルにダウンロード・保存し、元サイトが消えても画像が閲覧できるようにする。
+- **モジュール**: `backend/app/image_archiver.py`（新規）。
+  - `archive_images_in_markdown(markdown, page_url)`: Markdown 内の画像参照を検出→DL→SHA-256 ハッシュ名で `data/images/` に保存→URL を `/api/images/{hash}.{ext}` に書き換え。
+  - `archive_single_image(url)`: OG 画像（`image_url`）を 1 枚だけアーカイブ。
+- **ストレージ**: `data/images/{sha256}.{ext}` — ハッシュベースのフラット構造で自動重複排除。DB スキーマ変更なし。
+- **配信**: `/api/images/` に `StaticFiles` をマウント。Docker の `./data:/app/data` で自動永続化。
+- **フォールバック**: 画像 DL 失敗時は元サイトの絶対 URL をそのまま保持（相対 URL は絶対 URL に変換）。
+- **bot 対策**: `httpx.Client` にブラウザ同等のヘッダー（UA, Accept, Referer, Sec-Fetch-\*）を付与。
+- **プレースホルダー除去**: alt テキストが `No Image` / `noimage` 等のパターンにマッチする画像参照を Markdown から除去。
+- **統合箇所**: `main.py` の `_persist_clip()` で `archive_images_in_markdown()` / `archive_single_image()` を呼び出し。
+- **相対リンク変換**: `fetch_page.py` で HTML→Markdown 変換前に `<a href>` と `<img src>` の相対 URL を `urljoin` で絶対 URL に変換。
 
 ### フロントの互換
 

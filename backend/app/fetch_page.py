@@ -58,6 +58,12 @@ def extract_from_html(html: str, page_url: str) -> dict[str, str | None]:
         or soup.select_one('[role="main"]')
         or soup.body
     )
+    # 相対 URL を絶対 URL に変換（<a href>, <img src>）
+    for a in soup.find_all("a", href=True):
+        a["href"] = urljoin(page_url, a["href"])
+    for img in soup.find_all("img", src=True):
+        img["src"] = urljoin(page_url, img["src"])
+
     text = ""
     body_md = ""
     if root:
