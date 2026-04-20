@@ -13,6 +13,7 @@ from app.bearer_middleware import BearerAuthMiddleware
 from app.config import settings
 from app.db import SessionLocal, get_db, init_db
 from app.fetch_page import fetch_and_extract
+from app.image_archiver import archive_images_in_markdown, archive_single_image
 from app.markdown_util import markdown_to_plain_preview, plain_text_to_markdown
 from app.schemas import BulkIds, ClipCreate, ClipFromUrl, ClipListResponse, ClipOut, ClipUpdate
 
@@ -107,6 +108,9 @@ def _persist_clip(db: Session, payload: ClipCreate) -> models.Clip:
     cat = suggest_category(payload.title, payload.summary)
 
     bm = _resolve_body_markdown(payload)
+    bm = archive_images_in_markdown(bm, payload.url)
+    archived_og = archive_single_image(payload.image_url) if payload.image_url else None
+
     bt = (payload.body_text or "").strip()
     if not bt and bm:
         bt = markdown_to_plain_preview(bm)
@@ -115,7 +119,7 @@ def _persist_clip(db: Session, payload: ClipCreate) -> models.Clip:
         url=payload.url,
         title=payload.title or "",
         summary=payload.summary or "",
-        image_url=payload.image_url,
+        image_url=archived_og or payload.image_url,
         body_text=bt,
         body_markdown=bm,
         category=cat,
@@ -352,6 +356,10 @@ def list_tags(db: Session = Depends(get_db)):
     rows = db.query(models.Tag).order_by(models.Tag.name).all()
     return [{"id": t.id, "name": t.name, "source": t.source} for t in rows]
 
+
+images_path = settings.images_dir
+images_path.mkdir(parents=True, exist_ok=True)
+app.mount("/api/images", StaticFiles(directory=images_path), name="archived-images")
 
 static_path = settings.static_dir
 if static_path.is_dir():

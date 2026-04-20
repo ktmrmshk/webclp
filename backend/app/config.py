@@ -21,5 +21,15 @@ class Settings(BaseSettings):
     # ゴミ箱に入れてから完全削除までの日数
     trash_retention_days: int = Field(default=30, ge=1, le=3650, validation_alias="WEBCLIP_TRASH_RETENTION_DAYS")
 
+    @property
+    def data_dir(self) -> Path:
+        if self.database_url.startswith("sqlite:///"):
+            return Path(self.database_url.replace("sqlite:///", "")).resolve().parent
+        return Path("./data").resolve()
+
+    @property
+    def images_dir(self) -> Path:
+        return self.data_dir / "images"
+
 
 settings = Settings()

@@ -2,5 +2,6 @@
 data/
 backend/.venv/
 backend/webclip.db
+backend/images/
 backend/**/*.pyc
 __pycache__/
