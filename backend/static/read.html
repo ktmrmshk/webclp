@@ -266,9 +266,22 @@
         renderPanel.innerHTML = html;
         renderPanel.hidden = false;
 
+        if (c.created_at) {
+          const d = new Date(c.created_at);
+          if (!isNaN(d.getTime())) {
+            metaLine.hidden = false;
+            const y = d.getFullYear();
+            const mo = String(d.getMonth() + 1).padStart(2, "0");
+            const da = String(d.getDate()).padStart(2, "0");
+            const h = String(d.getHours()).padStart(2, "0");
+            const mi = String(d.getMinutes()).padStart(2, "0");
+            metaLine.textContent = `クリップ日時: ${y}/${mo}/${da} ${h}:${mi}`;
+          }
+        }
         if (c.deleted_at) {
           metaLine.hidden = false;
           metaLine.textContent =
+            (metaLine.textContent ? metaLine.textContent + " ｜ " : "") +
             "このクリップはゴミ箱にあります（保存された Markdown のみ表示しています）。";
         }
       })().catch((e) => {

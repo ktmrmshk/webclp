@@ -220,6 +220,79 @@
       font-size: 0.7rem;
     }
     .tag.auto { border: 1px dashed #3d4a60; }
+    .clip-date { color: var(--muted); font-size: 0.7rem; white-space: nowrap; }
+    /* --- Date Range Picker --- */
+    .drp-wrap { position: relative; }
+    .drp-trigger {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.45rem 0.65rem;
+      border-radius: 8px; border: 1px solid var(--border);
+      background: var(--card); color: var(--text);
+      cursor: pointer; font: inherit; font-size: 0.85rem;
+      white-space: nowrap; min-width: 170px;
+    }
+    .drp-trigger svg { flex-shrink: 0; color: var(--muted); }
+    .drp-trigger span { flex: 1; text-align: left; }
+    .drp-dropdown {
+      position: absolute; top: calc(100% + 6px); left: 0; z-index: 100;
+      background: #1c2028; border: 1px solid var(--border); border-radius: 14px;
+      padding: 0; display: flex;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+    .drp-dropdown[hidden] { display: none !important; }
+    .drp-presets {
+      display: flex; flex-direction: column; gap: 2px;
+      padding: 0.75rem 0.5rem; border-right: 1px solid var(--border);
+      min-width: 110px;
+    }
+    .drp-preset-btn {
+      background: transparent; border: none; color: var(--muted);
+      font: inherit; font-size: 0.78rem; text-align: left;
+      padding: 0.4rem 0.6rem; border-radius: 6px; cursor: pointer;
+      white-space: nowrap;
+    }
+    .drp-preset-btn:hover { background: rgba(91,140,255,0.12); color: var(--text); }
+    .drp-preset-btn.active { background: rgba(91,140,255,0.2); color: var(--accent); font-weight: 600; }
+    .drp-calendar { padding: 1rem; width: 320px; }
+    .drp-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 0.75rem;
+    }
+    .drp-month-label { font-weight: 600; font-size: 1rem; }
+    .drp-nav { display: flex; gap: 0.25rem; }
+    .drp-nav-btn {
+      background: transparent; border: none; color: var(--accent);
+      font-size: 1.4rem; line-height: 1; padding: 0.15rem 0.5rem;
+      cursor: pointer; border-radius: 6px;
+    }
+    .drp-nav-btn:hover { background: rgba(91,140,255,0.15); }
+    .drp-weekdays {
+      display: grid; grid-template-columns: repeat(7, 1fr);
+      text-align: center; font-size: 0.72rem; color: var(--muted);
+      margin-bottom: 0.35rem; font-weight: 600;
+    }
+    .drp-days {
+      display: grid; grid-template-columns: repeat(7, 1fr);
+      gap: 2px 0; text-align: center;
+    }
+    .drp-day {
+      position: relative; width: 100%; aspect-ratio: 1;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.82rem; cursor: pointer; border-radius: 0;
+      background: transparent; border: none; color: var(--text);
+      padding: 0; font: inherit;
+    }
+    .drp-day:hover:not(.drp-out):not(.drp-selected) { background: rgba(91,140,255,0.12); border-radius: 50%; }
+    .drp-day.drp-out { color: #4a5060; }
+    .drp-day.drp-today { font-weight: 700; }
+    .drp-day.drp-in-range { background: rgba(91,140,255,0.18); }
+    .drp-day.drp-range-start { border-radius: 50% 0 0 50%; }
+    .drp-day.drp-range-end { border-radius: 0 50% 50% 0; }
+    .drp-day.drp-range-start.drp-range-end { border-radius: 50%; }
+    .drp-day.drp-selected {
+      background: var(--accent); color: #fff; border-radius: 50%;
+      font-weight: 600; z-index: 1;
+    }
     dialog {
       border: 1px solid var(--border);
       border-radius: 12px;
@@ -323,6 +396,38 @@
       <select id="filterTag">
         <option value="">すべてのタグ</option>
       </select>
+      <div class="drp-wrap" id="dateRangePicker">
+        <button type="button" class="drp-trigger" id="drpTrigger">
+          <span id="drpLabel">期間を指定</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </button>
+        <div class="drp-dropdown" id="drpDropdown" hidden>
+          <div class="drp-presets" id="drpPresets">
+            <button type="button" class="drp-preset-btn" data-days="1">1 day</button>
+            <button type="button" class="drp-preset-btn" data-days="7">7 days</button>
+            <button type="button" class="drp-preset-btn" data-days="30">30 days</button>
+            <button type="button" class="drp-preset-btn" data-days="90">3 months</button>
+            <button type="button" class="drp-preset-btn" data-days="180">6 months</button>
+            <button type="button" class="drp-preset-btn" data-days="365">1 year</button>
+            <button type="button" class="drp-preset-btn" data-days="0" style="margin-top:auto;color:var(--accent);">クリア</button>
+          </div>
+          <div class="drp-calendar">
+            <div class="drp-header">
+              <span class="drp-month-label" id="drpMonthLabel"></span>
+              <div class="drp-nav">
+                <button type="button" class="drp-nav-btn" id="drpPrev">&lsaquo;</button>
+                <button type="button" class="drp-nav-btn" id="drpNext">&rsaquo;</button>
+              </div>
+            </div>
+            <div class="drp-weekdays">
+              <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+            </div>
+            <div class="drp-days" id="drpDays"></div>
+          </div>
+        </div>
+        <input type="hidden" id="dateFrom" />
+        <input type="hidden" id="dateTo" />
+      </div>
       <label class="toolbar-label" style="display:flex;align-items:center;gap:0.35rem;font-size:0.85rem;color:var(--muted);">
         表示
         <select id="viewMode" title="カタログの表示形式">
@@ -740,11 +845,15 @@
       const q = document.getElementById("q").value.trim();
       const cat = document.getElementById("filterCat").value;
       const tag = document.getElementById("filterTag").value;
+      const dateFrom = document.getElementById("dateFrom").value;
+      const dateTo = document.getElementById("dateTo").value;
       const pageSize = getPageSize();
       const params = new URLSearchParams();
       if (q) params.set("q", q);
       if (cat) params.set("category", cat);
       if (tag) params.set("tag", tag);
+      if (dateFrom) params.set("date_from", dateFrom);
+      if (dateTo) params.set("date_to", dateTo);
       if (trashView) params.set("trash", "true");
       params.set("page", String(currentPage));
       params.set("page_size", String(pageSize));
@@ -820,6 +929,7 @@
         const editBtn = trashView
           ? ""
           : `<button type="button" class="secondary" data-edit="${c.id}"${btnStyle ? ` style="${btnStyle}"` : ""}>編集</button>`;
+        const clipDate = c.created_at ? formatDate(c.created_at) : "";
         el.innerHTML = `
           ${chk}
           ${thumb}
@@ -828,6 +938,7 @@
             <p class="summary">${escapeHtml(c.summary || "")}</p>
             <a class="url" href="${escapeAttr(c.url)}" target="_blank" rel="noopener">${escapeHtml(c.url)}</a>
             <div class="meta">
+              ${clipDate ? `<span class="clip-date">${escapeHtml(clipDate)}</span>` : ""}
               ${c.category ? `<span class="tag">${escapeHtml(c.category)}</span>` : ""}
               ${tagHtml}
             </div>
@@ -963,6 +1074,205 @@
       currentPage = 1;
       render();
     });
+    /* --- Date Range Picker logic --- */
+    (function initDateRangePicker() {
+      const trigger = document.getElementById("drpTrigger");
+      const dropdown = document.getElementById("drpDropdown");
+      const label = document.getElementById("drpLabel");
+      const daysEl = document.getElementById("drpDays");
+      const monthLabel = document.getElementById("drpMonthLabel");
+      const inputFrom = document.getElementById("dateFrom");
+      const inputTo = document.getElementById("dateTo");
+
+      let viewYear, viewMonth; // currently displayed month
+      let rangeStart = null;  // Date or null
+      let rangeEnd = null;    // Date or null
+      let pickState = 0;      // 0=pick start, 1=pick end
+
+      const MONTHS = ["January","February","March","April","May","June",
+                       "July","August","September","October","November","December"];
+
+      function toDateStr(d) {
+        return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+      }
+      function fmtLabel(d) {
+        return (d.getMonth()+1) + " / " + d.getDate() + " / " + d.getFullYear();
+      }
+      function sameDay(a, b) {
+        return a && b && a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+      }
+
+      function updateLabel() {
+        if (rangeStart && rangeEnd) {
+          label.textContent = fmtLabel(rangeStart) + "  –  " + fmtLabel(rangeEnd);
+          trigger.style.minWidth = "260px";
+        } else if (rangeStart) {
+          label.textContent = fmtLabel(rangeStart) + "  –  …";
+          trigger.style.minWidth = "260px";
+        } else {
+          label.textContent = "期間を指定";
+          trigger.style.minWidth = "170px";
+        }
+      }
+
+      function syncInputs() {
+        inputFrom.value = rangeStart ? toDateStr(rangeStart) : "";
+        inputTo.value = rangeEnd ? toDateStr(rangeEnd) : "";
+      }
+
+      function applyFilter() {
+        syncInputs();
+        currentPage = 1;
+        render();
+      }
+
+      function buildCalendar() {
+        monthLabel.textContent = MONTHS[viewMonth] + " " + viewYear;
+        const today = new Date(); today.setHours(0,0,0,0);
+        const firstDay = new Date(viewYear, viewMonth, 1);
+        const startOffset = firstDay.getDay(); // 0=Sun
+        const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+        const daysInPrev = new Date(viewYear, viewMonth, 0).getDate();
+
+        let html = "";
+        const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+        for (let i = 0; i < totalCells; i++) {
+          let day, dateObj, isOut = false;
+          if (i < startOffset) {
+            day = daysInPrev - startOffset + 1 + i;
+            dateObj = new Date(viewYear, viewMonth - 1, day);
+            isOut = true;
+          } else if (i >= startOffset + daysInMonth) {
+            day = i - startOffset - daysInMonth + 1;
+            dateObj = new Date(viewYear, viewMonth + 1, day);
+            isOut = true;
+          } else {
+            day = i - startOffset + 1;
+            dateObj = new Date(viewYear, viewMonth, day);
+          }
+          dateObj.setHours(0,0,0,0);
+
+          const classes = ["drp-day"];
+          if (isOut) classes.push("drp-out");
+          if (sameDay(dateObj, today)) classes.push("drp-today");
+          const isStart = sameDay(dateObj, rangeStart);
+          const isEnd = sameDay(dateObj, rangeEnd);
+          if (isStart || isEnd) classes.push("drp-selected");
+          if (rangeStart && rangeEnd && dateObj >= rangeStart && dateObj <= rangeEnd) {
+            classes.push("drp-in-range");
+            if (isStart) classes.push("drp-range-start");
+            if (isEnd) classes.push("drp-range-end");
+          }
+
+          html += `<button type="button" class="${classes.join(" ")}" data-date="${toDateStr(dateObj)}">${day}</button>`;
+        }
+        daysEl.innerHTML = html;
+      }
+
+      function onDayClick(e) {
+        e.stopPropagation();
+        const btn = e.target.closest(".drp-day");
+        if (!btn) return;
+        const parts = btn.dataset.date.split("-");
+        const clicked = new Date(+parts[0], +parts[1]-1, +parts[2]);
+        clicked.setHours(0,0,0,0);
+
+        if (pickState === 0) {
+          rangeStart = clicked;
+          rangeEnd = null;
+          pickState = 1;
+        } else {
+          if (clicked < rangeStart) {
+            rangeEnd = rangeStart;
+            rangeStart = clicked;
+          } else {
+            rangeEnd = clicked;
+          }
+          pickState = 0;
+          applyFilter();
+        }
+        updateLabel();
+        buildCalendar();
+      }
+
+      daysEl.addEventListener("click", onDayClick);
+
+      document.getElementById("drpPrev").addEventListener("click", () => {
+        viewMonth--;
+        if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+        buildCalendar();
+      });
+      document.getElementById("drpNext").addEventListener("click", () => {
+        viewMonth++;
+        if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+        buildCalendar();
+      });
+
+      trigger.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const isHidden = dropdown.hidden;
+        dropdown.hidden = !isHidden;
+        if (isHidden) {
+          const ref = rangeStart || new Date();
+          viewYear = ref.getFullYear();
+          viewMonth = ref.getMonth();
+          buildCalendar();
+        }
+      });
+
+      document.addEventListener("click", (e) => {
+        if (!dropdown.hidden && !document.getElementById("dateRangePicker").contains(e.target)) {
+          dropdown.hidden = true;
+          if (pickState === 1 && rangeStart && !rangeEnd) {
+            rangeEnd = rangeStart;
+            pickState = 0;
+            updateLabel();
+            applyFilter();
+          }
+        }
+      });
+
+      document.getElementById("drpPresets").addEventListener("click", (e) => {
+        const btn = e.target.closest(".drp-preset-btn");
+        if (!btn) return;
+        e.stopPropagation();
+        const days = parseInt(btn.dataset.days, 10);
+        if (days === 0) {
+          rangeStart = null;
+          rangeEnd = null;
+        } else {
+          const today = new Date(); today.setHours(0,0,0,0);
+          rangeEnd = today;
+          rangeStart = new Date(today);
+          rangeStart.setDate(rangeStart.getDate() - days + 1);
+        }
+        pickState = 0;
+        updateLabel();
+        syncPresetButtons();
+        if (rangeStart) {
+          viewYear = rangeEnd.getFullYear();
+          viewMonth = rangeEnd.getMonth();
+        }
+        buildCalendar();
+        applyFilter();
+        dropdown.hidden = true;
+      });
+
+      function syncPresetButtons() {
+        if (!rangeStart || !rangeEnd) {
+          document.querySelectorAll(".drp-preset-btn").forEach(b => b.classList.remove("active"));
+          return;
+        }
+        const today = new Date(); today.setHours(0,0,0,0);
+        const diff = Math.round((rangeEnd - rangeStart) / 86400000) + 1;
+        document.querySelectorAll(".drp-preset-btn").forEach(b => {
+          const d = parseInt(b.dataset.days, 10);
+          b.classList.toggle("active", d > 0 && d === diff && sameDay(rangeEnd, today));
+        });
+      }
+
+      updateLabel();
+    })();
     document.getElementById("reload").addEventListener("click", async () => {
       await loadFilters();
       await render();
@@ -1016,6 +1326,18 @@
         btn.disabled = false;
       }
     });
+
+    function formatDate(isoStr) {
+      if (!isoStr) return "";
+      const d = new Date(isoStr);
+      if (isNaN(d.getTime())) return "";
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      const h = String(d.getHours()).padStart(2, "0");
+      const min = String(d.getMinutes()).padStart(2, "0");
+      return `${y}/${m}/${day} ${h}:${min}`;
+    }
 
     function debounce(fn, ms) {
       let t;

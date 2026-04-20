@@ -170,6 +170,8 @@ def _clips_filtered_query(
     category: str | None,
     *,
     trash: bool,
+    date_from: str | None = None,
+    date_to: str | None = None,
 ):
     query = db.query(models.Clip)
     if trash:
@@ -187,6 +189,18 @@ def _clips_filtered_query(
         query = query.filter(models.Clip.category == category)
     if tag:
         query = query.join(models.Clip.tags).filter(models.Tag.name == tag).distinct()
+    if date_from:
+        try:
+            dt = datetime.fromisoformat(date_from)
+            query = query.filter(models.Clip.created_at >= dt)
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            dt = datetime.fromisoformat(date_to) + timedelta(days=1)
+            query = query.filter(models.Clip.created_at < dt)
+        except ValueError:
+            pass
     return query
 
 
@@ -219,14 +233,16 @@ def list_clips(
     tag: str | None = None,
     category: str | None = None,
     trash: bool = False,
+    date_from: str | None = None,
+    date_to: str | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(24, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
     purge_expired_trash(db)
-    base = _clips_filtered_query(db, q, tag, category, trash=trash)
+    base = _clips_filtered_query(db, q, tag, category, trash=trash, date_from=date_from, date_to=date_to)
     total = base.count()
-    ordered = _clips_filtered_query(db, q, tag, category, trash=trash)
+    ordered = _clips_filtered_query(db, q, tag, category, trash=trash, date_from=date_from, date_to=date_to)
     if trash:
         ordered = ordered.order_by(models.Clip.deleted_at.desc())
     else:
